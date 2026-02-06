@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Reading Tutor API
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Application
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+      
+      # Speech Provider
+      - SPEECH_PROVIDER=mock
+      
+      # Storage
+      - STORAGE_TYPE=redis
+      - REDIS_URL=redis://redis:6379
+      
+      # Optional: Azure Speech (uncomment when ready)
+      # - SPEECH_PROVIDER=azure
+      # - AZURE_SPEECH_KEY=${AZURE_SPEECH_KEY}
+      # - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
+      
+      # Optional: Supabase (uncomment when ready)
+      # - STORAGE_TYPE=supabase
+      # - SUPABASE_URL=${SUPABASE_URL}
+      # - SUPABASE_KEY=${SUPABASE_KEY}
+      
+      # Reading Tutor Settings
+      - CONFIDENCE_THRESHOLD=0.7
+      - STRICT_MODE_DEFAULT=false
+    depends_on:
+      - redis
+    volumes:
+      # Mount code for hot-reload in development
+      - ../app:/app/app
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload
+  
+  # Redis for session storage
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+  
+  # Optional: Redis Commander (Redis GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+
+volumes:
+  redis_data:
+
+# Networks (optional, for isolation)
+networks:
+  default:
+    name: reading-tutor-network
