@@ -2,9 +2,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies for Azure Speech SDK
 RUN apt-get update && apt-get install -y \
     gcc \
+    build-essential \
+    libssl-dev \
+    ca-certificates \
+    libasound2 \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install
