@@ -10,7 +10,8 @@ redis[asyncio]==5.0.1  # For Redis storage (production recommended)
 
 # Optional: Speech Providers
 azure-cognitiveservices-speech==1.34.0  # For Azure Speech
-# openai-whisper==20231117  # Uncomment for Whisper
+openai==1.12.0  # For OpenAI Whisper
+# openai-whisper==20231117  # Uncomment for local Whisper
 
 # Development Tools
 pytest==7.4.4
