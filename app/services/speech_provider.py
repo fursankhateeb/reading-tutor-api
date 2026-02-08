@@ -139,16 +139,15 @@ class SpeechProviderFactory:
     Factory for creating speech providers
     """
 
-
-@staticmethod
-def create_provider(provider_type: str,
-                    config: Dict[str, Any]) -> BaseSpeechProvider:
-    """Create a speech provider instance"""
-    if provider_type == "whisper":
-        from .whisper_speech import WhisperSpeechProvider
-        return WhisperSpeechProvider(config)
-    elif provider_type == "mock":
-        return MockSpeechProvider(config)
-    else:
-        raise ValueError(f"Unknown speech provider: {provider_type}. "
-                         f"Available providers: whisper, mock")
+    @staticmethod
+    def create_provider(provider_type: str,
+                        config: Dict[str, Any]) -> BaseSpeechProvider:
+        """Create a speech provider instance"""
+        if provider_type == "whisper":
+            from .whisper_speech import WhisperSpeechProvider
+            return WhisperSpeechProvider(config)
+        elif provider_type == "mock":
+            return MockSpeechProvider(config)
+        else:
+            raise ValueError(f"Unknown speech provider: {provider_type}. "
+                             f"Available providers: whisper, mock")
