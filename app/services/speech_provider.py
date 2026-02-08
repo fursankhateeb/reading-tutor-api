@@ -1,6 +1,6 @@
 """
-Speech Provider Interface - Abstract base for swappable STT services
-Supports: Azure Speech, OpenAI Whisper, NVIDIA Riva, Google Cloud, etc.
+Speech Provider Interface and Factory
+Abstract base class for speech-to-text providers
 """
 
 from abc import ABC, abstractmethod
@@ -9,157 +9,126 @@ from dataclasses import dataclass
 from enum import Enum
 
 
-class SpeechProvider(Enum):
-    """Available speech recognition providers"""
-    AZURE = "azure"
-    WHISPER = "whisper"
-    RIVA = "riva"
-    GOOGLE = "google"
-    MOCK = "mock"  # For testing
+class FeedbackType(Enum):
+    """Types of reading feedback"""
+    SUCCESS = "success"
+    SKIP = "skip"
+    MISPRONOUNCE = "mispronounce"
+    HESITATION = "hesitation"
 
 
 @dataclass
 class TranscriptionResult:
-    """Standardized transcription result from any provider"""
+    """Result from speech transcription"""
     transcript: str
     confidence: float
-    word_confidences: Optional[List[float]] = None
+    word_confidences: Optional[List[Dict[str, Any]]] = None
     language: Optional[str] = None
-    provider: Optional[str] = None
+    provider: str = "unknown"
+    error: Optional[str] = None
 
 
 @dataclass
 class PronunciationAssessment:
-    """Pronunciation assessment result (if provider supports it)"""
-    accuracy_score: float  # 0.0-1.0
-    fluency_score: Optional[float] = None
-    completeness_score: Optional[float] = None
+    """Pronunciation assessment result"""
+    accuracy_score: float
+    fluency_score: float
+    completeness_score: float
     phoneme_scores: Optional[List[Dict[str, Any]]] = None
 
 
 class BaseSpeechProvider(ABC):
     """
-    Abstract base class for speech recognition providers
-    
-    All providers must implement this interface to be swappable
+    Abstract base class for speech providers
+
+    All speech providers must implement these methods
     """
-    
+
     def __init__(self, config: Dict[str, Any]):
-        """
-        Initialize provider with configuration
-        
-        Args:
-            config: Provider-specific configuration
-                   (API keys, regions, model names, etc.)
-        """
+        """Initialize provider with configuration"""
         self.config = config
-    
+
     @abstractmethod
     async def transcribe(
-        self,
-        audio_data: bytes,
-        language: Optional[str] = None,
-        expected_text: Optional[str] = None
-    ) -> TranscriptionResult:
+            self,
+            audio_data: bytes,
+            language: Optional[str] = None,
+            expected_text: Optional[str] = None) -> TranscriptionResult:
         """
         Transcribe audio to text
-        
+
         Args:
-            audio_data: Raw audio bytes (WAV format)
-            language: Language code (e.g., 'en-US', 'ar-SA')
-            expected_text: Expected text for pronunciation assessment
-        
+            audio_data: Audio file bytes
+            language: Language code (e.g., 'ar-SA', 'en-US')
+            expected_text: Expected text for pronunciation assessment (optional)
+
         Returns:
             TranscriptionResult with transcript and confidence
         """
         pass
-    
+
     @abstractmethod
     async def assess_pronunciation(
-        self,
-        audio_data: bytes,
-        expected_text: str,
-        language: Optional[str] = None
-    ) -> PronunciationAssessment:
+            self,
+            audio_data: bytes,
+            expected_text: str,
+            language: Optional[str] = None) -> PronunciationAssessment:
         """
-        Assess pronunciation quality (if supported)
-        
+        Assess pronunciation quality
+
         Args:
-            audio_data: Raw audio bytes
+            audio_data: Audio file bytes
             expected_text: Reference text
             language: Language code
-        
+
         Returns:
             PronunciationAssessment with scores
-        
-        Raises:
-            NotImplementedError: If provider doesn't support assessment
         """
         pass
-    
+
     @abstractmethod
     def is_available(self) -> bool:
-        """
-        Check if provider is properly configured and available
-        
-        Returns:
-            True if provider can be used
-        """
+        """Check if provider is properly configured"""
         pass
-    
-    def get_provider_name(self) -> str:
-        """Get provider name for logging/debugging"""
-        return self.__class__.__name__
 
 
 class MockSpeechProvider(BaseSpeechProvider):
     """
-    Mock provider for testing without actual STT service
-    
-    Returns predefined transcripts based on test cases
+    Mock speech provider for testing
+    Returns predefined transcripts
     """
-    
+
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.mock_transcripts = config.get('mock_transcripts', {})
-    
+        self.default_transcript = config.get('default_transcript', '')
+
     async def transcribe(
-        self,
-        audio_data: bytes,
-        language: Optional[str] = None,
-        expected_text: Optional[str] = None
-    ) -> TranscriptionResult:
+            self,
+            audio_data: bytes,
+            language: Optional[str] = None,
+            expected_text: Optional[str] = None) -> TranscriptionResult:
         """Return mock transcript"""
-        
-        # Use expected_text as key for mock transcript
-        if expected_text and expected_text in self.mock_transcripts:
-            transcript = self.mock_transcripts[expected_text]
-        else:
-            # Default mock: return empty or predefined
-            transcript = self.config.get('default_transcript', '')
-        
-        return TranscriptionResult(
-            transcript=transcript,
-            confidence=0.85,
-            word_confidences=None,
-            language=language,
-            provider='mock'
-        )
-    
+        transcript = self.mock_transcripts.get(
+            expected_text, self.default_transcript or expected_text or "")
+
+        return TranscriptionResult(transcript=transcript,
+                                   confidence=0.95,
+                                   word_confidences=None,
+                                   language=language or 'en',
+                                   provider='mock')
+
     async def assess_pronunciation(
-        self,
-        audio_data: bytes,
-        expected_text: str,
-        language: Optional[str] = None
-    ) -> PronunciationAssessment:
-        """Return mock pronunciation assessment"""
-        return PronunciationAssessment(
-            accuracy_score=0.90,
-            fluency_score=0.85,
-            completeness_score=0.95,
-            phoneme_scores=None
-        )
-    
+            self,
+            audio_data: bytes,
+            expected_text: str,
+            language: Optional[str] = None) -> PronunciationAssessment:
+        """Return mock assessment"""
+        return PronunciationAssessment(accuracy_score=85.0,
+                                       fluency_score=80.0,
+                                       completeness_score=90.0,
+                                       phoneme_scores=None)
+
     def is_available(self) -> bool:
         """Mock provider is always available"""
         return True
@@ -168,80 +137,32 @@ class MockSpeechProvider(BaseSpeechProvider):
 class SpeechProviderFactory:
     """
     Factory for creating speech providers
-    
-    Allows runtime selection of provider based on config
     """
-    
-    _providers: Dict[str, type] = {
-        SpeechProvider.MOCK.value: MockSpeechProvider,
-        # Other providers registered at runtime
-    }
-    
-    @classmethod
-    def register_provider(cls, name: str, provider_class: type):
-        """
-        Register a new provider implementation
-        
-        Args:
-            name: Provider identifier (e.g., 'azure', 'whisper')
-            provider_class: Class implementing BaseSpeechProvider
-        """
-        if not issubclass(provider_class, BaseSpeechProvider):
-            raise ValueError(f"{provider_class} must inherit from BaseSpeechProvider")
-        
-        cls._providers[name] = provider_class
-    
-    @classmethod
-    def create_provider(
-        cls,
-        provider_name: str,
-        config: Dict[str, Any]
-    ) -> BaseSpeechProvider:
+
+    @staticmethod
+    def create_provider(provider_type: str,
+                        config: Dict[str, Any]) -> BaseSpeechProvider:
         """
         Create a speech provider instance
-        
+
         Args:
-            provider_name: Name of provider ('azure', 'whisper', etc.)
-            config: Provider-specific configuration
-        
+            provider_type: Type of provider ('azure', 'whisper', 'mock')
+            config: Provider configuration
+
         Returns:
-            Initialized provider instance
-        
+            BaseSpeechProvider instance
+
         Raises:
-            ValueError: If provider not registered
+            ValueError: If provider type is unknown
         """
-        if provider_name not in cls._providers:
-            raise ValueError(
-                f"Unknown provider: {provider_name}. "
-                f"Available: {list(cls._providers.keys())}"
-            )
-        
-        provider_class = cls._providers[provider_name]
-        return provider_class(config)
-    
-    @classmethod
-    def get_available_providers(cls) -> List[str]:
-        """Get list of registered provider names"""
-        return list(cls._providers.keys())
-
-
-# Example usage:
-"""
-# In your config/setup:
-from services.azure_speech import AzureSpeechProvider
-from services.whisper_speech import WhisperSpeechProvider
-
-SpeechProviderFactory.register_provider('azure', AzureSpeechProvider)
-SpeechProviderFactory.register_provider('whisper', WhisperSpeechProvider)
-
-# In your application:
-provider = SpeechProviderFactory.create_provider(
-    provider_name='azure',
-    config={
-        'subscription_key': os.getenv('AZURE_SPEECH_KEY'),
-        'region': os.getenv('AZURE_SPEECH_REGION')
-    }
-)
-
-result = await provider.transcribe(audio_data, language='ar-SA')
-"""
+        if provider_type == "azure":
+            from .azure_speech import AzureSpeechProvider
+            return AzureSpeechProvider(config)
+        elif provider_type == "whisper":
+            from .whisper_speech import WhisperSpeechProvider
+            return WhisperSpeechProvider(config)
+        elif provider_type == "mock":
+            return MockSpeechProvider(config)
+        else:
+            raise ValueError(f"Unknown speech provider: {provider_type}. "
+                             f"Available providers: azure, whisper, mock")
