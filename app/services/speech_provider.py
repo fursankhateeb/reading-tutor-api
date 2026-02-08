@@ -144,14 +144,7 @@ class SpeechProviderFactory:
 def create_provider(provider_type: str,
                     config: Dict[str, Any]) -> BaseSpeechProvider:
     """Create a speech provider instance"""
-    if provider_type == "azure":
-        try:
-            from .azure_speech import AzureSpeechProvider
-            return AzureSpeechProvider(config)
-        except ImportError:
-            raise ValueError("Azure Speech SDK not available. "
-                             "Use 'whisper' or 'mock' provider instead.")
-    elif provider_type == "whisper":
+    if provider_type == "whisper":
         from .whisper_speech import WhisperSpeechProvider
         return WhisperSpeechProvider(config)
     elif provider_type == "mock":
