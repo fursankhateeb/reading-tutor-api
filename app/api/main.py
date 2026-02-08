@@ -13,12 +13,8 @@ from app.services.speech_provider import SpeechProviderFactory, MockSpeechProvid
 from app.services.storage import StorageFactory
 
 # Setup logging
-logging.basicConfig(
-    level=config.LOG_LEVEL,
-    format=config.LOG_FORMAT
-)
+logging.basicConfig(level=config.LOG_LEVEL, format=config.LOG_FORMAT)
 logger = logging.getLogger(__name__)
-
 
 # Global instances (initialized in lifespan)
 speech_provider = None
@@ -33,55 +29,55 @@ async def lifespan(app: FastAPI):
     Initializes services on startup, cleans up on shutdown
     """
     global speech_provider, storage
-    
+
     # Startup
     logger.info(f"Starting {config.APP_NAME} v{config.APP_VERSION}")
     logger.info(f"Environment: {config.ENVIRONMENT}")
-    
+
     try:
         # Validate configuration
         config.validate()
-        
+
         # Initialize speech provider
         logger.info(f"Initializing speech provider: {config.SPEECH_PROVIDER}")
-        
+
         # Register mock provider (always available)
         SpeechProviderFactory.register_provider('mock', MockSpeechProvider)
-        
+
         # TODO: Register other providers when implemented
         # from app.services.azure_speech import AzureSpeechProvider
         # SpeechProviderFactory.register_provider('azure', AzureSpeechProvider)
-        
+
         speech_provider = SpeechProviderFactory.create_provider(
-            provider_name=config.SPEECH_PROVIDER,
-            config=config.get_speech_config()
-        )
-        
+            provider_type=config.SPEECH_PROVIDER,
+            config=config.get_speech_config())
+
         if not speech_provider.is_available():
-            logger.warning(f"Speech provider '{config.SPEECH_PROVIDER}' not properly configured")
-        
+            logger.warning(
+                f"Speech provider '{config.SPEECH_PROVIDER}' not properly configured"
+            )
+
         # Initialize storage
         logger.info(f"Initializing storage: {config.STORAGE_TYPE}")
         storage = StorageFactory.create_storage(
             storage_type=config.STORAGE_TYPE,
-            config=config.get_storage_config()
-        )
-        
+            config=config.get_storage_config())
+
         logger.info("Application started successfully")
-        
+
     except Exception as e:
         logger.error(f"Failed to start application: {e}")
         raise
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down application")
-    
+
     # Clean up resources
     if hasattr(storage, 'close'):
         await storage.close()
-    
+
     logger.info("Application shutdown complete")
 
 
@@ -89,9 +85,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=config.APP_NAME,
     version=config.APP_VERSION,
-    description="Bilingual AI Reading Tutor API for children learning Arabic and English",
-    lifespan=lifespan
-)
+    description=
+    "Bilingual AI Reading Tutor API for children learning Arabic and English",
+    lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
@@ -107,20 +103,15 @@ app.add_middleware(
 def get_speech_provider():
     """Dependency: Get speech provider instance"""
     if speech_provider is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Speech provider not initialized"
-        )
+        raise HTTPException(status_code=503,
+                            detail="Speech provider not initialized")
     return speech_provider
 
 
 def get_storage():
     """Dependency: Get storage instance"""
     if storage is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Storage not initialized"
-        )
+        raise HTTPException(status_code=503, detail="Storage not initialized")
     return storage
 
 
@@ -152,8 +143,10 @@ async def health_check():
     return {
         "status": "healthy",
         "services": {
-            "speech_provider": speech_provider is not None and speech_provider.is_available(),
-            "storage": storage is not None
+            "speech_provider":
+            speech_provider is not None and speech_provider.is_available(),
+            "storage":
+            storage is not None
         },
         "config": {
             "speech_provider": config.SPEECH_PROVIDER,
@@ -169,14 +162,11 @@ from app.api.routes import reading, sessions
 app.include_router(reading.router, prefix="/api/v1", tags=["Reading"])
 app.include_router(sessions.router, prefix="/api/v1", tags=["Sessions"])
 
-
 if __name__ == "__main__":
     import uvicorn
-    
-    uvicorn.run(
-        "app.api.main:app",
-        host=config.HOST,
-        port=config.PORT,
-        reload=config.RELOAD,
-        log_level=config.LOG_LEVEL.lower()
-    )
+
+    uvicorn.run("app.api.main:app",
+                host=config.HOST,
+                port=config.PORT,
+                reload=config.RELOAD,
+                log_level=config.LOG_LEVEL.lower())
