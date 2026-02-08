@@ -1,5 +1,5 @@
 # Force rebuild - change this number to bust cache
-ARG CACHE_BUST=5
+ARG CACHE_BUST=6
 
 FROM python:3.11-slim
 WORKDIR /app
@@ -21,7 +21,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip cache purge || true
+RUN pip install --no-cache-dir --force-reinstall -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/
