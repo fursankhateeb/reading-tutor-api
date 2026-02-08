@@ -1,5 +1,5 @@
 # Force rebuild - change this number to bust cache
-ARG CACHE_BUST=6
+ARG CACHE_BUST=7
 
 FROM python:3.11-slim
 WORKDIR /app
