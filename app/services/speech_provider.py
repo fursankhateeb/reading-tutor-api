@@ -139,30 +139,23 @@ class SpeechProviderFactory:
     Factory for creating speech providers
     """
 
-    @staticmethod
-    def create_provider(provider_type: str,
-                        config: Dict[str, Any]) -> BaseSpeechProvider:
-        """
-        Create a speech provider instance
 
-        Args:
-            provider_type: Type of provider ('azure', 'whisper', 'mock')
-            config: Provider configuration
-
-        Returns:
-            BaseSpeechProvider instance
-
-        Raises:
-            ValueError: If provider type is unknown
-        """
-        if provider_type == "azure":
+@staticmethod
+def create_provider(provider_type: str,
+                    config: Dict[str, Any]) -> BaseSpeechProvider:
+    """Create a speech provider instance"""
+    if provider_type == "azure":
+        try:
             from .azure_speech import AzureSpeechProvider
             return AzureSpeechProvider(config)
-        elif provider_type == "whisper":
-            from .whisper_speech import WhisperSpeechProvider
-            return WhisperSpeechProvider(config)
-        elif provider_type == "mock":
-            return MockSpeechProvider(config)
-        else:
-            raise ValueError(f"Unknown speech provider: {provider_type}. "
-                             f"Available providers: azure, whisper, mock")
+        except ImportError:
+            raise ValueError("Azure Speech SDK not available. "
+                             "Use 'whisper' or 'mock' provider instead.")
+    elif provider_type == "whisper":
+        from .whisper_speech import WhisperSpeechProvider
+        return WhisperSpeechProvider(config)
+    elif provider_type == "mock":
+        return MockSpeechProvider(config)
+    else:
+        raise ValueError(f"Unknown speech provider: {provider_type}. "
+                         f"Available providers: whisper, mock")
