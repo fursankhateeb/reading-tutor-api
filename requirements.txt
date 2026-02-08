@@ -9,7 +9,7 @@ redis[asyncio]==5.0.1  # For Redis storage (production recommended)
 # supabase==2.3.0  # Uncomment for Supabase storage
 
 # Optional: Speech Providers
-azure-cognitiveservices-speech==1.34.0  # For Azure Speech
+# azure-cognitiveservices-speech==1.34.0  # For Azure Speech
 openai==1.12.0  # For OpenAI Whisper
 # openai-whisper==20231117  # Uncomment for local Whisper
 
